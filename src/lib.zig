@@ -1,14 +1,14 @@
 //! Secure Sockets - TLS functionality for Tardy Sockets
-
 const std = @import("std");
 
+const options = @import("options");
 const tardy = @import("tardy");
 const Runtime = tardy.Runtime;
 const Socket = tardy.Socket;
 
-pub const BearSSL = @import("bearssl/lib.zig").BearSSL;
+pub const BearSSL = if (options.bearssl) @import("bearssl/lib.zig").BearSSL else {};
 
-//pub const s2n = @import("s2n.zig").s2n;
+pub const s2n = if (options.s2n_tls) @import("s2n.zig").s2n else {};
 
 pub const SecureSocket = struct {
     pub const Mode = enum { client, server };

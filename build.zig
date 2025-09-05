@@ -1,48 +1,78 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
+    var enable = .{
+        .bearssl = b.option(bool, "bearssl", "enable bearssl tls") orelse true,
+        .s2n_tls = b.option(bool, "s2n", "enable s2n tls") orelse false,
+    };
+    if (enable.s2n_tls) enable.bearssl = false;
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const tardy = b.dependency("tardy", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("tardy");
-
-    const bearssl, const bearssl_h = blk: {
-        const bearssl = b.dependency("bearssl", .{
-            .target = target,
-            .optimize = optimize,
-            .BR_LE_UNALIGNED = false,
-            .BR_BE_UNALIGNED = false,
-        });
-        const bearssl_lib = bearssl.artifact("bearssl");
-
-        const upstream = bearssl.builder.dependency("bearssl", .{
-            .target = target,
-            .optimize = optimize,
-        });
-        const c_mod = b.addTranslateC(.{
-            .optimize = optimize,
-            .target = target,
-            .link_libc = true,
-            .root_source_file = upstream.path("inc/bearssl.h"),
-        }).createModule();
-
-        break :blk .{ bearssl_lib, c_mod };
-    };
+    const options = b.addOptions();
+    options.addOption(bool, "bearssl", enable.bearssl);
+    options.addOption(bool, "s2n_tls", enable.s2n_tls);
 
     const lib = b.addModule("secsock", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
     });
-    lib.linkLibrary(bearssl);
-    lib.addImport("tardy", tardy);
-    lib.addImport("bearssl_h", bearssl_h);
 
-    // add_example(b, "s2n", target, optimize, tardy, lib);
-    add_example(b, "bearssl", target, optimize, tardy, lib);
+    const tardy = b.dependency("tardy", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("tardy");
+
+    lib.addImport("tardy", tardy);
+    lib.addImport("options", options.createModule());
+
+    if (enable.bearssl) if (b.lazyDependency("bearssl", .{
+        .target = target,
+        .optimize = optimize,
+        .BR_LE_UNALIGNED = false,
+        .BR_BE_UNALIGNED = false,
+    })) |bearssl| {
+        const bearssl_lib = bearssl.artifact("bearssl");
+
+        const upstream = bearssl.builder.dependency("bearssl", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const bearssl_h = b.addTranslateC(.{
+            .optimize = optimize,
+            .target = target,
+            .link_libc = true,
+            .root_source_file = upstream.path("inc/bearssl.h"),
+        }).createModule();
+
+        lib.linkLibrary(bearssl_lib);
+        lib.addImport("bearssl_h", bearssl_h);
+        add_example(b, "bearssl", target, optimize, tardy, lib);
+    };
+
+    if (enable.s2n_tls) if (b.lazyDependency("s2n_tls", .{
+        .target = target,
+        .optimize = optimize,
+    })) |s2n_tls| {
+        const s2n_lib = s2n_tls.artifact("s2n");
+
+        const upstream = s2n_tls.builder.dependency("s2n_tls", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const s2n_h = b.addTranslateC(.{
+            .optimize = optimize,
+            .target = target,
+            .link_libc = true,
+            .root_source_file = upstream.path("api/s2n.h"),
+        }).createModule();
+
+        lib.linkLibrary(s2n_lib);
+        lib.addImport("s2n_h", s2n_h);
+        add_example(b, "s2n", target, optimize, tardy, lib);
+    };
 }
 
 fn add_example(
