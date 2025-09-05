@@ -1,18 +1,18 @@
 const std = @import("std");
 
-const Tardy = @import("tardy").Tardy(.auto);
-const Timer = @import("tardy").Timer;
-const Socket = @import("tardy").Socket;
 const Runtime = @import("tardy").Runtime;
-
 const secsock = @import("secsock");
+const Socket = @import("tardy").Socket;
+const Timer = @import("tardy").Timer;
+
+const Tardy = @import("tardy").Tardy(.auto);
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var tardy = try Tardy.init(allocator, .{ .threading = .single });
+    var tardy: Tardy = try .init(allocator, .{ .threading = .single });
     defer tardy.deinit();
 
     // ideally, this is the pattern we can utilize where the
@@ -29,7 +29,7 @@ pub fn main() !void {
 }
 
 fn echo_frame(rt: *Runtime, s2n: *secsock.s2n) !void {
-    const socket = try Socket.init(.{ .tcp = .{ .host = "127.0.0.1", .port = 9862 } });
+    const socket: Socket = try .init(.{ .tcp = .{ .host = "127.0.0.1", .port = 9862 } });
     defer socket.close_blocking();
     try socket.bind();
     try socket.listen(128);

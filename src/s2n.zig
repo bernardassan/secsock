@@ -6,11 +6,11 @@ const Runtime = tardy.Runtime;
 
 const SecureSocket = @import("lib.zig").SecureSocket;
 
-const log = std.log.scoped(.s2n);
-
 const c = @cImport({
     @cInclude("s2n.h");
 });
+
+const log = std.log.scoped(.s2n);
 
 var initalized: bool = false;
 var deinitalized: bool = false;
@@ -115,7 +115,7 @@ pub const s2n = struct {
                     error.Closed => return 0,
                     // TODO: Properly handle errors.
                     else => {
-                        log.err("error on recv: {s}", .{@errorName(e)});
+                        log.err("error on recv: {t}", .{e});
                         return c.S2N_FAILURE;
                     },
                 };
@@ -138,7 +138,7 @@ pub const s2n = struct {
                     },
                     // TODO: Properly handle errors.
                     else => {
-                        log.err("error on send: {s}", .{@errorName(e)});
+                        log.err("error on send: {t}", .{e});
                         return c.S2N_FAILURE;
                     },
                 };
@@ -151,7 +151,7 @@ pub const s2n = struct {
         const vtable_ctx = try self.allocator.create(VtableContext);
         vtable_ctx.* = .{ .allocator = self.allocator, .s2n = self, .conn = conn.?, .cb_ctx = cb_ctx };
 
-        return SecureSocket{
+        return .{
             .socket = socket,
             .vtable = .{
                 .inner = vtable_ctx,

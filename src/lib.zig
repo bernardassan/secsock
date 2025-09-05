@@ -14,7 +14,7 @@ pub const SecureSocket = struct {
     pub const Mode = enum { client, server };
 
     pub fn unsecured(socket: Socket) SecureSocket {
-        return SecureSocket{
+        return .{
             .socket = socket,
             .vtable = .{
                 .inner = undefined,

@@ -9,11 +9,49 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
-        .name = "s2n",
+    const mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
         .link_libc = true,
+    });
+    mod.addCSourceFiles(.{
+        .root = upstream.path("utils/"),
+        .files = utils_src,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = upstream.path("error/"),
+        .files = error_src,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = upstream.path("stuffer/"),
+        .files = stuffer_src,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = upstream.path("crypto/"),
+        .files = crypto_src,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = upstream.path("tls/"),
+        .flags = &.{ "-include", upstream.path("utils/s2n_prelude.h").getPath(b) },
+        .files = tls_src,
+    });
+
+    mod.addCSourceFiles(.{
+        .root = upstream.path("tls/extensions/"),
+        .files = tls_extensions_src,
+    });
+
+    mod.addIncludePath(upstream.path("./"));
+    mod.addIncludePath(upstream.path("api/"));
+
+    const lib = b.addLibrary(.{
+        .name = "s2n",
+        .linkage = .static,
+        .root_module = mod,
     });
 
     if (lib.rootModuleTarget().os.tag == .linux) {
@@ -29,39 +67,6 @@ pub fn build(b: *std.Build) void {
         lib.linkSystemLibrary("crypto");
     }
 
-    lib.addCSourceFiles(.{
-        .root = upstream.path("utils/"),
-        .files = utils_src,
-    });
-
-    lib.addCSourceFiles(.{
-        .root = upstream.path("error/"),
-        .files = error_src,
-    });
-
-    lib.addCSourceFiles(.{
-        .root = upstream.path("stuffer/"),
-        .files = stuffer_src,
-    });
-
-    lib.addCSourceFiles(.{
-        .root = upstream.path("crypto/"),
-        .files = crypto_src,
-    });
-
-    lib.addCSourceFiles(.{
-        .root = upstream.path("tls/"),
-        .flags = &.{ "-include", upstream.path("utils/s2n_prelude.h").getPath(b) },
-        .files = tls_src,
-    });
-
-    lib.addCSourceFiles(.{
-        .root = upstream.path("tls/extensions/"),
-        .files = tls_extensions_src,
-    });
-
-    lib.addIncludePath(upstream.path("./"));
-    lib.addIncludePath(upstream.path("api/"));
     lib.installHeader(upstream.path("api/s2n.h"), "s2n.h");
 
     b.installArtifact(lib);
