@@ -131,7 +131,7 @@ pub const BearSSL = struct {
         c.br_pem_decoder_setdest(&p_ctx, struct {
             fn decoder(ctx: ?*anyopaque, src: ?*const anyopaque, size: usize) callconv(.c) void {
                 var list: *std.ArrayList(u8) = @ptrCast(@alignCast(ctx.?));
-                const data = @as([*c]const u8, @ptrCast(src.?))[0..size];
+                const data = @as([*]const u8, @ptrCast(src.?))[0..size];
                 list.appendSliceAssumeCapacity(data);
             }
         }.decoder, &decoded);
