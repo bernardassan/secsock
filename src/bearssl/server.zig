@@ -89,7 +89,7 @@ pub fn to_secure_socket_server(self: *BearSSL, socket: Socket) !SecureSocket {
         cb_ctx,
     );
 
-    return SecureSocket{
+    return .{
         .socket = socket,
         .vtable = .{
             .inner = context,
