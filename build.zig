@@ -1,18 +1,18 @@
 const std = @import("std");
 
+const TlsImpl = enum {
+    bearssl,
+    s2n_tls,
+};
+
 pub fn build(b: *std.Build) void {
-    var enable = .{
-        .bearssl = b.option(bool, "bearssl", "enable bearssl tls") orelse true,
-        .s2n_tls = b.option(bool, "s2n_tls", "enable s2n tls") orelse false,
-    };
-    if (enable.s2n_tls) enable.bearssl = false;
+    const tls = b.option(TlsImpl, "tls", "Choose between bearssl and s2n_tls implementation") orelse .bearssl;
 
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const options = b.addOptions();
-    options.addOption(bool, "bearssl", enable.bearssl);
-    options.addOption(bool, "s2n_tls", enable.s2n_tls);
+    options.addOption(TlsImpl, "tls", tls);
 
     const lib = b.addModule("secsock", .{
         .root_source_file = b.path("src/lib.zig"),
@@ -28,51 +28,52 @@ pub fn build(b: *std.Build) void {
     lib.addImport("tardy", tardy);
     lib.addImport("options", options.createModule());
 
-    if (enable.bearssl) if (b.lazyDependency("bearssl", .{
-        .target = target,
-        .optimize = optimize,
-        .BR_LE_UNALIGNED = false,
-        .BR_BE_UNALIGNED = false,
-    })) |bearssl| {
-        const bearssl_lib = bearssl.artifact("bearssl");
-
-        const upstream = bearssl.builder.dependency("bearssl", .{
+    switch (tls) {
+        .bearssl => if (b.lazyDependency("bearssl", .{
             .target = target,
             .optimize = optimize,
-        });
-        const bearssl_h = b.addTranslateC(.{
-            .optimize = optimize,
+            .BR_LE_UNALIGNED = false,
+            .BR_BE_UNALIGNED = false,
+        })) |bearssl| {
+            const bearssl_lib = bearssl.artifact("bearssl");
+
+            const upstream = bearssl.builder.dependency("bearssl", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const bearssl_h = b.addTranslateC(.{
+                .optimize = optimize,
+                .target = target,
+                .link_libc = true,
+                .root_source_file = upstream.path("inc/bearssl.h"),
+            }).createModule();
+
+            lib.linkLibrary(bearssl_lib);
+            lib.addImport("bearssl_h", bearssl_h);
+            add_example(b, "bearssl", target, optimize, tardy, lib);
+        },
+        .s2n_tls => if (b.lazyDependency("s2n_tls", .{
             .target = target,
-            .link_libc = true,
-            .root_source_file = upstream.path("inc/bearssl.h"),
-        }).createModule();
-
-        lib.linkLibrary(bearssl_lib);
-        lib.addImport("bearssl_h", bearssl_h);
-        add_example(b, "bearssl", target, optimize, tardy, lib);
-    };
-
-    if (enable.s2n_tls) if (b.lazyDependency("s2n_tls", .{
-        .target = target,
-        .optimize = optimize,
-    })) |s2n_tls| {
-        const s2n_lib = s2n_tls.artifact("s2n");
-
-        const upstream = s2n_tls.builder.dependency("s2n_tls", .{
-            .target = target,
             .optimize = optimize,
-        });
-        const s2n_h = b.addTranslateC(.{
-            .optimize = optimize,
-            .target = target,
-            .link_libc = true,
-            .root_source_file = upstream.path("api/s2n.h"),
-        }).createModule();
+        })) |s2n_tls| {
+            const s2n_lib = s2n_tls.artifact("s2n");
 
-        lib.linkLibrary(s2n_lib);
-        lib.addImport("s2n_h", s2n_h);
-        add_example(b, "s2n", target, optimize, tardy, lib);
-    };
+            const upstream = s2n_tls.builder.dependency("s2n_tls", .{
+                .target = target,
+                .optimize = optimize,
+            });
+            const s2n_h = b.addTranslateC(.{
+                .optimize = optimize,
+                .target = target,
+                .link_libc = true,
+                .root_source_file = upstream.path("api/s2n.h"),
+            }).createModule();
+
+            lib.linkLibrary(s2n_lib);
+            lib.addImport("s2n_h", s2n_h);
+            add_example(b, "s2n", target, optimize, tardy, lib);
+        },
+    }
 }
 
 fn add_example(

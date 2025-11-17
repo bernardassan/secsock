@@ -6,9 +6,9 @@ const tardy = @import("tardy");
 const Runtime = tardy.Runtime;
 const Socket = tardy.Socket;
 
-pub const BearSSL = if (options.bearssl) @import("bearssl/lib.zig").BearSSL;
+pub const BearSSL = if (options.tls == .bearssl) @import("bearssl/lib.zig").BearSSL;
 
-pub const s2n = if (options.s2n_tls) @import("s2n.zig").s2n;
+pub const s2n = if (options.tls == .s2n_tls) @import("s2n.zig").s2n;
 
 pub const SecureSocket = struct {
     pub const Mode = enum { client, server };

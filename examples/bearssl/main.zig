@@ -8,6 +8,9 @@ const Timer = @import("tardy").Timer;
 
 const Tardy = @import("tardy").Tardy(.auto);
 
+const log = std.log.scoped(.@"examples/bearssl");
+
+// curl -vk https://127.0.0.1:9862
 pub fn main() !void {
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
@@ -56,7 +59,7 @@ fn echo_frame(rt: *Runtime, secure: *const SecureSocket) !void {
     while (true) {
         var buf: [1024]u8 = undefined;
         const count = connected.recv(rt, &buf) catch |e| if (e == error.Closed) break else return e;
-        std.log.info("recv count: {d}", .{count});
+        log.info("recv count: {d}", .{count});
         _ = connected.send(rt, buf[0..count]) catch |e| if (e == error.Closed) break else return e;
     }
 }

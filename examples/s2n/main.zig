@@ -5,8 +5,11 @@ const secsock = @import("secsock");
 const Socket = @import("tardy").Socket;
 const Timer = @import("tardy").Timer;
 
+const log = std.log.scoped(.@"examples/s2n");
+
 const Tardy = @import("tardy").Tardy(.auto);
 
+// curl -vk https://127.0.0.1:9862
 pub fn main() !void {
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
@@ -44,6 +47,7 @@ fn echo_frame(rt: *Runtime, s2n: *secsock.s2n) !void {
     while (true) {
         var buf: [1024]u8 = undefined;
         const count = connected.recv(rt, &buf) catch |e| if (e == error.Closed) break else return e;
+        log.info("recv count: {d}", .{count});
         _ = connected.send(rt, buf[0..count]) catch |e| if (e == error.Closed) break else return e;
     }
 }
