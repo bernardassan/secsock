@@ -13,7 +13,7 @@
             .lazy = true,
         },
         .tardy = .{
-            .url = "git+https://github.com/bernardassan/tardy?ref=zig-0.15.2#edd54c2dbdb745760848b083b7f844b05d531148",
+            .url = "git+https://github.com/tardy-org/tardy?ref=v0.3.0#26cbc3cab7993b04e6447471eb523b21376d7dee",
             .hash = "tardy-0.3.0-69wrgn77AwDLFqiryrDCuNl-q7xF9VEUdONc7ytrNvsM",
         },
     },
